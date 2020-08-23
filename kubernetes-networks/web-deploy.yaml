@@ -3,14 +3,14 @@ kind: Deployment
 metadata:
   name: web # Название нашего объекта Deployment
 spec:
-  replicas: 6 # Начнем с одного пода
+  replicas: 3
   selector: # Укажем, какие поды относятся к нашему Deployment:
     matchLabels: # - это поды с меткой
       app: web # app и ее значением web
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 100%
+      maxUnavailable: 0
       maxSurge: 100%
   template: # Теперь зададим шаблон конфигурации пода
     metadata:
