@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web # Название нашего объекта Deployment
+spec:
+  replicas: 6 # Начнем с одного пода
+  selector: # Укажем, какие поды относятся к нашему Deployment:
+    matchLabels: # - это поды с меткой
+      app: web # app и ее значением web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 100%
+      maxSurge: 100%
+  template: # Теперь зададим шаблон конфигурации пода
+    metadata:
+      name: web
+      labels: # Метки в формате key: value
+        app: web
+    spec: # Описание Pod
+      containers: # Описание контейнеров внутри Pod
+       - name: web-container # Название контейнера
+         image: bulkak/bulkak-platform-nginx:latest # Образ из которого создается контейнер
+         readinessProbe:
+           httpGet:
+             path: /index.html
+             port: 8000
+         livenessProbe:
+           tcpSocket: 
+             port: 8000
+         volumeMounts:
+          - name: app
+            mountPath: /app
+      initContainers:
+       - name: init-container
+         image: "busybox:1.31.0"
+         command:
+           ['sh', '-c', 'wget -O- https://tinyurl.com/otus-k8s-intro | sh']
+         volumeMounts:
+          - name: app
+            mountPath: /app
+            readOnly: false
+      volumes:
+       - name: app
+         emptyDir: {}
