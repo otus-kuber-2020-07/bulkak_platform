@@ -3,10 +3,13 @@ FROM nginx:latest
 
 EXPOSE 8000
 
-RUN rm -rf /etc/nginx/nginx.conf && mkdir /app
+RUN rm -rf /etc/nginx/nginx.conf
 COPY src/conf/nginx/nginx.conf /etc/nginx/
+RUN mkdir /app
+RUN chown -R 1001 /var/cache/nginx && \
+    chown -R 1001 /app && \
+    touch /var/run/nginx.pid && \
+    chown -R 1001 /var/run/nginx.pid
 
-ADD src/app /app
 
-WORKDIR /app
 USER 1001
