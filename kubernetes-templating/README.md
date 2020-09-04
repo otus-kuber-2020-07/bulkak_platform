@@ -46,10 +46,56 @@ client-go version: v0.0.0-master+$Format:%h$
 ```
  - почитал доку по jsonnet, проследил чего откуда берется в родительскких объектах деплоя и сервиса, подправил
   приложенный вариант конфига services.jsonnet. Задеплоил сервисы с помощью kubecfg, шоп починился.
- - установил kustomize, сделал минимальную конфигурацию, заэплаил в кластер обе кастомизации.
+ - установил kustomize, сделал минимальную конфигурацию, заэплаил в кластер обе кастомизации (сервис recommendationservice).
  - пошел делать PR чтобы прогнать тесты на задания без звездочек.
-  
-  
- 
 
+##  chartmuseum | Задание со ⭐
 
+   - Installation
+```
+curl -LO https://s3.amazonaws.com/chartmuseum/release/latest/bin/linux/amd64/chartmuseum
+```
+ - configuration
+ Создаем секрет с кредами сервис-аккаунта гугла
+ ```
+ kubectl create secret generic chartmuseum-secret --from-file=credentials.json="my-project-45e35d85a593.json" -n chartmuseum
+ ```
+ в GC создал хранилище (долго разбирался что нужно чтобы гугл не ругался на права доступа к bucket, оказалось что
+  его сначала создать надо), его имя и имя секрета с файлом сервис-аккаунта гугла подпихнул в values.yaml, заново
+   накатил релиз chartmuseum (подсмотрел в доке здесь https://github.com/helm/charts/tree/master/stable/chartmuseum#using-with-google-cloud-storage-and-a-google-service-account )
+ Запустил проверочку:
+ ```
+chartmuseum --debug \
+  --storage="google" \
+  --storage-google-bucket="bulkak-gcs-bucket"
+
+2020-09-04T00:22:40.677+0300	DEBUG	Fetching chart list from storage	{"repo": ""}
+2020-09-04T00:22:40.790+0300	DEBUG	No change detected between cache and storage	{"repo": ""}
+2020-09-04T00:22:40.790+0300	INFO	Starting ChartMuseum	{"port": 8080}
+```
+наконец отработала. Дальше попробовал разместить там файл пакета чата. 
+```
+curl --data-binary "@hipster-shop-0.1.0.tgz" http://localhost:8080/api/charts
+```
+ответ:
+```
+{"saved":true}
+```
+
+дальше добавил репозиторий в список helm:
+```
+helm repo add chartmuseum http://localhost:8080
+```
+и проверил что он нашел загруженный чат:
+```
+$ helm search repo chartmuseum/ 
+NAME                    	CHART VERSION	APP VERSION	DESCRIPTION                
+chartmuseum/hipster-shop	0.1.0        	1.16.0     	A Helm chart for Kubernetes
+```
+
+##  Используем helmfile | Задание со ⭐
+
+ - Набросал примерно структуру файлов для установки nginx-ingress, cert-manager и harbor, большая часть есть в лекции, 
+ от себя добавил усановку CRD и ClusterIssuer для cert-manager в зависимости от environment и добавил для Harbor annotations
+  которые добавлял у себя при установке.
+ - проверять не стал - время поджимает уже(

@@ -14,7 +14,7 @@ secret:
 env:
   open:
     # storage backend, can be one of: local, alibaba, amazon, google, microsoft, oracle
-    STORAGE: local
+    STORAGE: google
     # oss bucket to store charts for alibaba storage backend
     STORAGE_ALIBABA_BUCKET:
     # prefix to store charts for alibaba storage backend
@@ -35,7 +35,7 @@ env:
     # server side encryption algorithm
     STORAGE_AMAZON_SSE:
     # gcs bucket to store charts for google storage backend
-    STORAGE_GOOGLE_BUCKET:
+    STORAGE_GOOGLE_BUCKET: bulkak-gcs-bucket
     # prefix to store charts for google storage backend
     STORAGE_GOOGLE_PREFIX:
     # container to store charts for microsoft storage backend
@@ -282,9 +282,9 @@ ingress:
 # secret that contains the json file, you can use the following entries
 gcp:
   secret:
-    enabled: false
+    enabled: true
     # Name of the secret that contains the encoded json
-    name:
+    name: chartmuseum-secret
     # Secret key that holds the json value.
     key: credentials.json
 oracle:

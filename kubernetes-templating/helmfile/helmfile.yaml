@@ -1,0 +1,44 @@
+environments:
+  stagging:
+    values:
+      - domain: nip.io
+  production:
+    values:
+      - domain: xip.io
+
+repositories:
+  - name: stable
+    url: https://kubernetes-charts.storage.googleapis.com
+  - name: jetstack
+    url: https://charts.jetstack.io
+  - name: harbor
+    url: https://github.com/goharbor/harbor-helm
+
+templates:
+  template: &template
+    missingFileHandler: Info
+    values:
+      - ./values/{{`{{ .Release.Name }}`}}.yaml
+
+releases:
+  - name: nginx-ingress
+    chart: stable/nginx-ingress
+    namespace: nginx-ingress
+    version: 1.41.3
+    <<: *template
+
+  - name: cert-manager
+    chart: jetstack/cert-manager
+    namespace: cert-manager
+    version: 0.16.1
+    values:
+      - ./values/cert-manager.crds.yaml
+      - ./values/{{`{{ .Environment.Name }}`}}/issuer.yaml
+    <<: *template
+
+  - name: harbor
+    chart: harbor/harbor
+    namespace: harbor
+    version: 1.1.2
+    <<: *template
+
