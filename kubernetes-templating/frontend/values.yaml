@@ -1,0 +1,36 @@
+deploy:
+  image:
+    tag: v0.1.3
+  replicas:
+    count: 1
+service:
+  type: NodePort
+  port: 80
+  targetPort: 8080
+  NodePort:
+    nodePort: 30008
+visibleKey: ENC[AES256_GCM,data:AMDAHt18zTpWo6g=,iv:Nz/qRmYCtSClLAR1J7b+YzszptPWECyhwtsGjVdAMqE=,tag:zqjmQwndIpxLWWsyoD5nLw==,type:str]
+sops:
+    kms: []
+    gcp_kms: []
+    lastmodified: '2020-08-30T11:09:13Z'
+    mac: ENC[AES256_GCM,data:3aMH4/LJveCvHj7HmbyB7Egef9B3UVnzs0liBLwlSSWgOdum9UiLq9jg85l+4FpmlTLuxMpyJbvf2Pj11mVsm8Cj3UPwKsOmEniIHj+Dj+w52VgvdL205y2TTswUL2/y14vCh8q4z6Vvle0wopJp4t/80aB2NyvFpVUFC1hobnE=,iv:w+xL7e17pcu2YfH2z8Qrv/IvaicERN2lRPd4cDHHRR4=,tag:8EV07zzvxtSvw1rEzAW+eA==,type:str]
+    pgp:
+    -   created_at: '2020-08-30T11:09:13Z'
+        enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            wcBMA3HDI9hGjgEeAQgAaMKzMGBLgkrZLBvkn/VM5TPexa02kdnfa3CDQQUI0nwt
+            3CpbQvs2xt2mW8zxbK/Athdi6q+LSkZ8dFpgSFv/XGcZwA2b8XfnJlScDCWhvNpz
+            xBjDjTzFbYER9ay4eyRGn3jlZ5m13U07ETZpfciyo5m/wS73RFQTAldunyOlvvL8
+            Dnkd7q1e33DNzQ++mCaz9Zy4K2tuueshB0yIt3H7SVP3k04e2mPZ5CT9MZ11FSFY
+            6L0K1z6AdPE0R3pJPRv37yAGy7U1jYdoMgy7z5OWkCNfvzdlwHRFiupkUfGvNw/S
+            30GBtMrIBsnupNzdfnMfVDnofDFndupPXYXM+4Ae9dLgAeR/shgmQ97a7BO+73x6
+            cElB4SV14N/g6+EDOeCb4rC1Cdfg6uXzEDMoNOTip83KtZtjQJFeBvZ8ZYgAPYSo
+            jqULzBtZFeDI5FrhWwV/RSkJSiUMTGUcAMHiSYx47uHEwQA=
+            =dYvb
+            -----END PGP MESSAGE-----
+        fp: 4C6C21D26410945E86F3A634D07FEEF286D6B3E6
+    unencrypted_suffix: _unencrypted
+    version: 3.0.3
+
