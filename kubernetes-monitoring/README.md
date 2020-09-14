@@ -15,3 +15,6 @@ helm repo add choerodon https://openchart.choerodon.com.cn/choerodon/c7n
  --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false
 ```
 
+## Если пробросить порты, то можно посмотреть всякое
+
+<img src="./photo_2020-09-14_15-42-14.jpg" />
