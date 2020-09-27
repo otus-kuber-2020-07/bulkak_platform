@@ -12,4 +12,5 @@ rawConfig: |
       Name modify
       Match *
       Remove time
-      Remove @timestamp
+parsers:
+  enabled: true
