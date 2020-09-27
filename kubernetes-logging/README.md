@@ -67,6 +67,9 @@ prom-operator
       namespace: "nginx-ingress"
       namespaceSelector: {}
       scrapeInterval: 30s
+  podAnnotations: {
+    fluentbit.io/parser: k8s-nginx-ingress
+  }
 ```
 
 Find requests that contain the number 200, in any field
