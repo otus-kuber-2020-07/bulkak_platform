@@ -1,3 +1,11 @@
+tolerations:
+  - key: node-role
+    operator: Equal
+    value: infra
+    effect: NoSchedule
+nodeSelector:
+  cloud.google.com/gke-nodepool: infra-pool
+
 ingress:
   enabled: true
   annotations: {
@@ -5,4 +13,4 @@ ingress:
   }
   path: /
   hosts:
-  - kibana.35.228.187.72.xip.io
+  - kibana.35.228.88.141.xip.io

@@ -1,3 +1,10 @@
+tolerations:
+  - key: node-role
+    operator: Equal
+    value: infra
+    effect: NoSchedule
+nodeSelector:
+  cloud.google.com/gke-nodepool: infra-pool
 backend:
   type: es
   es:
@@ -12,5 +19,3 @@ rawConfig: |
       Name modify
       Match *
       Remove time
-parsers:
-  enabled: true

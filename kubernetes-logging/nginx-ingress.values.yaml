@@ -6,14 +6,6 @@ controller:
     "remote_user": "$remote_user", "bytes_sent": $bytes_sent, "request_time": $request_time, "status":$status, "vhost": "$host", "request_proto": "$server_protocol",
     "path": "$uri", "request_query": "$args", "request_length": $request_length, "duration": $request_time,"method": "$request_method", "http_referrer": "$http_referer",
     "http_user_agent": "$http_user_agent" }'
-
-  metrics:
-    enabled: true
-    serviceMonitor:
-      enabled: true
-      namespace: "nginx-ingress"
-      namespaceSelector: {}
-      scrapeInterval: 30s
       
   tolerations:
     - key: node-role
@@ -36,6 +28,11 @@ controller:
 
   nodeSelector: 
     cloud.google.com/gke-nodepool: infra-pool
-  podAnnotations: {
-    fluentbit.io/parser: k8s-nginx-ingress
-  }
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      namespace: "nginx-ingress"
+      namespaceSelector: {}
+      scrapeInterval: 30s

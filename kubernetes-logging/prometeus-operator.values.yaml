@@ -1,0 +1,23 @@
+tolerations:
+  - key: node-role
+    operator: Equal
+    value: infra
+    effect: NoSchedule
+nodeSelector:
+  cloud.google.com/gke-nodepool: infra-pool
+grafana:
+  ingress:
+    enabled: true
+    annotations: {
+      kubernetes.io/ingress.class: nginx
+    }
+    path: /
+    hosts:
+    - grafana.35.228.88.141.xip.io
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki:3100
+      jsonData:
+        maxLines: 1000
