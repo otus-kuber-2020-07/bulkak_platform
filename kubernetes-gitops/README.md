@@ -112,6 +112,29 @@ prometheus      microservices-demo      1               2020-10-05 23:12:10.8637
 ```
 
   - запушил изменения в сервис frontend, создал в гитлаюе тэг, запустилась сборка и пуш тэгированных образов в docker-hub, красота.
-  - 
+  - но почему-то автоматика не захотела следить за тэгами моего образа( 
+  - Покумекал - нашел что в values  чарта  frontend указан  image из примера, не мой - поправил. Все равно не обновляет
+  - Еще покумекал. пошел в документацию flux, сравнил с предоставленным конфигом, нашел отличия и странности (flux.weave.works/tag.chart-image - что это вообще, из прошлых версий наверно. вообще конечно вся домашка в неактуальных ссылках и конфигах, печаль), поправил.
+  - Увидел в логах запись, похоже на то что нужно:
+```
+"ts=2020-10-06T19:37:30.03630873Z caller=warming.go:198 component=warmer info="refreshing image" image=bulkak/hipster-frontend tag_count=6 to_update=1 of_which_refresh=0 of_which_missing=1
+```
+```
+"ts=2020-10-06T19:37:31.047485925Z caller=warming.go:206 component=warmer updated=bulkak/hipster-frontend successful=1 attempted=1
+"
+```
+ - не все равно ничего не присходит. Пошел в логи:
+```
+$ kubectl get helmrelease -n microservices-demo 
+NAME       RELEASE    STATUS     MESSAGE                                                               AGE
+frontend   frontend   deployed   Release failed for Helm release 'frontend' in 'microservices-demo'.   24h
+```
+```
+$ kubectl describe helmrelease -n microservices-demo
+  Warning  FailedReleaseSync  74s (x25 over 25m)    helm-operator  synchronization of release 'frontend' in namespace 'microservices-demo' failed: dry-run upgrade failed: dry-run upgrade for comparison failed: error validating "": error validating data: ValidationError(Deployment.spec.template.spec.containers[0].image): invalid type for io.k8s.api.core.v1.Container.image: got "map", expected "string"
+```
+ - логи горят накосячил в конфиге deployment. подправил
+ - все равно ничего!
+
 
 
