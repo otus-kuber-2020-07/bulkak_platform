@@ -111,7 +111,7 @@ frontend        microservices-demo      1               2020-10-05 20:12:10.2923
 prometheus      microservices-demo      1               2020-10-05 23:12:10.863760611 +0300 MSK deployed        kube-prometheus-9.3.1   0.38.1 
 ```
 
-  - запушил изменения в сервис frontend, создал в гитлаюе тэг, запустилась сборка и пуш тэгированных образов в docker-hub, красота.
+  - запушил изменения в сервис frontend, создал в гитлабе тэг, запустилась сборка и пуш тэгированных образов в docker-hub, красота.
   - но почему-то автоматика не захотела следить за тэгами моего образа( 
   - Покумекал - нашел что в values  чарта  frontend указан  image из примера, не мой - поправил. Все равно не обновляет
   - Еще покумекал. пошел в документацию flux, сравнил с предоставленным конфигом, нашел отличия и странности (flux.weave.works/tag.chart-image - что это вообще, из прошлых версий наверно. вообще конечно вся домашка в неактуальных ссылках и конфигах, печаль), поправил.
@@ -133,8 +133,41 @@ frontend   frontend   deployed   Release failed for Helm release 'frontend' in '
 $ kubectl describe helmrelease -n microservices-demo
   Warning  FailedReleaseSync  74s (x25 over 25m)    helm-operator  synchronization of release 'frontend' in namespace 'microservices-demo' failed: dry-run upgrade failed: dry-run upgrade for comparison failed: error validating "": error validating data: ValidationError(Deployment.spec.template.spec.containers[0].image): invalid type for io.k8s.api.core.v1.Container.image: got "map", expected "string"
 ```
- - логи горят накосячил в конфиге deployment. подправил
+ - логи говорят накосячил в конфиге deployment. подправил
  - все равно ничего!
+
+ -----
+
+  - утро вечера мудреннее, надо было не выпендриваться с названием тэгов. Сделал просто 0.0.1 - все сработало как надо. (у меня были r.0.0.1, хотя странно, ведь в задании v0.0.1 - тоже не проходит по официальной регулярке semver https://regex101.com/r/vkijKf/1/ . НО! доке есть даже целый абзац про как раз этот 'v', пишут там что 'prefixing a semantic version with a “v” is a common way (in English) to indicate it is a version number' и норм им. а мой не очень common way 'r.' им не угодил. тьфу)
+
+## Обновление Helm chart
+
+ - поменял имя deployment
+ - и видим в логах строчки:
+
+ ```
+ts=2020-10-07T21:24:49.999521819Z caller=helm.go:69 component=helm version=v3 info="creating upgraded release for frontend" targetNamespace=microservices-demo release=frontend
+
+ts=2020-10-07T21:24:50.024272745Z caller=helm.go:69 component=helm version=v3 info="checking 5 resources for changes" targetNamespace=microservices-demo release=frontend
+
+ts=2020-10-07T21:24:50.032615373Z caller=helm.go:69 component=helm version=v3 info="Looks like there are no changes for Service \"frontend\"" targetNamespace=microservices-demo release=frontend
+
+ts=2020-10-07T21:24:50.056403503Z caller=helm.go:69 component=helm version=v3 info="Created a new Deployment called \"frontend-hipster\" in microservices-demo\n" targetNamespace=microservices-demo release=frontend
+
+ts=2020-10-07T21:24:50.069796385Z caller=helm.go:69 component=helm version=v3 info="Looks like there are no changes for Gateway \"frontend-gateway\"" targetNamespace=microservices-demo release=frontend
+
+ts=2020-10-07T21:24:50.103326263Z caller=helm.go:69 component=helm version=v3 info="Looks like there are no changes for ServiceMonitor \"frontend\"" targetNamespace=microservices-demo release=frontend
+
+ts=2020-10-07T21:24:50.123198029Z caller=helm.go:69 component=helm version=v3 info="Looks like there are no changes for VirtualService \"frontend\"" targetNamespace=microservices-demo release=frontend
+
+ts=2020-10-07T21:24:50.126636377Z caller=helm.go:69 component=helm version=v3 info="Deleting \"frontend\" in microservices-demo..." targetNamespace=microservices-demo release=frontend
+
+ts=2020-10-07T21:24:50.155886101Z caller=helm.go:69 component=helm version=v3 info="updating status for upgraded release for frontend" targetNamespace=microservices-demo release=frontend
+ ```
+
+## Самостоятельное задание
+
+
 
 
 
