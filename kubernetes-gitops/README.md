@@ -167,7 +167,151 @@ ts=2020-10-07T21:24:50.155886101Z caller=helm.go:69 component=helm version=v3 in
 
 ## Самостоятельное задание
 
+- Добавил по образу и подобию первого манифесты HelmRelease для всех микросервисов входящих в состав HipsterShop
+- Проверил - все развернулись хорошо, единственно loadgenerator хотел себе url магазина корректный, я не дал, нагрузка его мне не нужна, вообще удалил его из кластера.
+```
+helm delete loadgenerator -n microservices-demo
+kubectl delete helmrelease loadgenerator -n microservices-demo
+```
 
+# Canary deployments с Flagger и Istio
 
+## Установка Istio
+ - в начале задания мы включили istio в настройках кластера, а щас еще будем его устанавливать, странно.
+```
+curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.6.12 TARGET_ARCH=x86_64 sh -
+cd istio-1.6.12
+sudo mv bin/istioctl /usr/bin/ 
+istioctl install --set profile=remote 
+```
+ - при установке были проблемы, решил не обращать на это внимания - видимо конфликты с уже установленным в кластере 
+ - в итоге к уже установленному добавилось только istiod
+```
+$ kubectl -n istio-system get deploy 
+NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+istio-citadel            1/1     1            1           5d19h
+istio-galley             1/1     1            1           5d19h
+istio-ingressgateway     1/1     1            1           5d19h
+istio-pilot              1/1     1            1           5d19h
+istio-policy             1/1     1            1           5d19h
+istio-sidecar-injector   1/1     1            1           5d19h
+istio-telemetry          1/1     1            1           5d19h
+istiod                   1/1     1            1           11m
+promsd                   1/1     1            1           5d19h
+```
+## Установка Flagger
 
+ - Добавление helm-репозитория flagger:
+```
+helm repo add flagger https://flagger.app
+```
 
+ - Установка CRD для Flagger:
+```
+kubectl apply -f https://raw.githubusercontent.com/weaveworks/flagger/master/artifacts/flagger/crd.yaml
+```
+
+ - Установка flagger с указанием использовать Istio:
+
+```
+helm upgrade --install flagger flagger/flagger \
+--namespace=istio-system \
+--set crd.create=false \
+--set meshProvider=istio \
+--set metricsServer=http://prometheus:9090
+```
+
+## Istio | Sidecar Injection
+
+ - взял текущий конфиг ns, добавил туда label istio-injection: enabled
+
+```
+kubectl get ns microservices-demo -o yaml
+kubectl apply -f kubernetes-gitops/NS-microservices-demo.yaml
+```
+ - пр  это конфиг неймспейса постоянно возвращадся в исходное состояние. Если поразмыслить - оно и понятно, кластер не подчиняется!) его состояние контроллирует flux, поэтому правильный способ изменить конфиг ns  - в коде deploy/namespaces/ns.yaml, flux сам применит эти измения
+ - пушим измения, смотрим лэйблы у ns
+```
+kubectl get ns microservices-demo --show-labels
+```
+ - Самый простой способ добавить sidecar контейнер в уже запущенные pod - удалить их:
+```
+kubectl delete pods --all -n microservices-demo
+```
+
+## Доступ к frontend
+
+ - Создайте директорию deploy/istio и поместите в нее следующие
+манифесты:
+frontend-vs.yaml
+frontend-gw.yaml
+
+```
+$ kubectl get gateway -n microservices-demo
+NAME               AGE
+frontend           19s
+frontend-gateway   13m
+```
+
+ - Для доступа снаружи нам понадобится EXTERNAL-IP сервиса istioingressgateway
+
+ ```
+$ kubectl get svc istio-ingressgateway -n istio-system 
+NAME                   TYPE           CLUSTER-IP   EXTERNAL-IP     PORT(S)                                                                                                                                      AGE
+istio-ingressgateway   LoadBalancer   10.1.4.47    34.71.154.233   15020:31159/TCP,80:32617/TCP,443:31917/TCP,31400:30846/TCP,15029:31119/TCP,15030:32312/TCP,15031:30522/TCP,15032:31162/TCP,15443:31997/TCP   5d19h
+ ```
+
+## Istio | Самостоятельное задание
+
+ - заменил файлы virtualService.yaml gateway.yaml в чарте frontend, удалил istio, запушил
+
+## Flagger | Canary
+
+ - добавил в чарт (а точнее изменил имующуйся) canary.yaml (весь конфиг я так понимаю не влез в дз, что тоже очень мило конечно)
+ - ресурс canary не появился =(
+ - посмотрел вокруг - подумал походу надо версию чарта увеличить в Cart.yaml, увеличил, запушил - ожидаемо не в этом дело.
+ - обсмотрел вывод команды
+```
+fluxctl list-workloads -a --k8s-fwd-ns flux 
+```
+ - как водится пришлось еще покумекать. Мы переименовывали deployment для frontend, подловили блин. Поправил name в targetRef, запушил.
+ - не получилось( решил переименовать deployment  потом чекнул логи helm релиза
+```
+kubectl describe helmrelease frontend -n microservices-demo
+```
+  -  а там такая чепухня
+
+```
+Warning  FailedReleaseSync  3m43s (x143 over 152m)  helm-operator  synchronization of release 'frontend' in namespace 'microservices-demo' failed: dry-run upgrade failed: dry-run upgrade for comparison failed: rendered manifests contain a new resource that already exists. Unable to continue with update: existing resource conflict: namespace: microservices-demo, name: frontend, existing_kind: networking.istio.io/v1alpha3, Kind=Gateway, new_kind: networking.istio.io/v1alpha3, Kind=Gateway
+```
+ - удалил ручками старый gateway
+
+```
+kubectl delete Gateway frontend -n microservices-demo
+```
+
+ - получилось!) 
+
+```
+$ kubectl get canary -n microservices-demo 
+NAME       STATUS        WEIGHT   LASTTRANSITIONTIME
+frontend   Initialized   0        2020-10-11T17:09:22
+
+$ kubectl get pods -n microservices-demo -l app=frontend-primary
+NAME                                READY   STATUS    RESTARTS   AGE
+frontend-primary-859cf9cf57-bbws5   2/2     Running   0          4m41s
+```
+
+ - Попробуем провести релиз (сделал новый тэг, образ запушился)
+
+```
+$ kubectl describe canary frontend -n microservices-demo 
+
+  Warning  Synced  65s                flagger  Prometheus query failed: running query failed: request failed: Get "http://prometheus:9090/api/v1/query?query=+sum%28+rate%28+istio_requests_total%7B+reporter%3D%22destination%22%2C+destination_workload_namespace%3D%22microservices-demo%22%2C+destination_workload%3D~%22frontend%22%2C+response_code%21~%225.%2A%22+%7D%5B1m%5D+%29+%29+%2F+sum%28+rate%28+istio_requests_total%7B+reporter%3D%22destination%22%2C+destination_workload_namespace%3D%22microservices-demo%22%2C+destination_workload%3D~%22frontend%22+%7D%5B1m%5D+%29+%29+%2A+100": dial tcp: lookup prometheus on 10.1.0.10:53: no such host
+  Warning  Synced  5s                 flagger  Rolling back frontend.microservices-demo failed checks threshold reached 1
+  Warning  Synced  5s                 flagger  Canary failed! Scaling down frontend.microservices-demo
+```
+
+ - вернул prometheus, раз уж мы его указали как metricsServer для flagger
+ - по примеру вывода describe из дз - следующая проблема в том что без нагрузки fragger не может определить успешность релиза, поэтому вернем loadgenerator и учтем что теперь у нас есть ingress (пропишем корректный хост с xip)
+ - пришлось удалять кластер, денюжки закончились.
