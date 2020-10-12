@@ -315,3 +315,124 @@ $ kubectl describe canary frontend -n microservices-demo
  - вернул prometheus, раз уж мы его указали как metricsServer для flagger
  - по примеру вывода describe из дз - следующая проблема в том что без нагрузки fragger не может определить успешность релиза, поэтому вернем loadgenerator и учтем что теперь у нас есть ingress (пропишем корректный хост с xip)
  - пришлось удалять кластер, денюжки закончились.
+
+ - ну и понеслась с нуля:
+```
+gcloud init
+gcloud container clusters get-credentials cluster-1
+kubectl apply -f https://raw.githubusercontent.com/fluxcd/helm-operator/helm-v3-dev/deploy/flux-helm-release-crd.yaml
+kubectl create namespace flux
+helm upgrade --install flux fluxcd/flux -f kubernetes-gitops/flux.values.yaml --namespace flux
+helm upgrade --install helm-operator fluxcd/helm-operator -f kubernetes-gitops/helm-operator.values.yaml --namespace flux
+
+fluxctl identity --k8s-fwd-ns flux
+#установил полученный ключ в gitlab
+
+istioctl install --set profile=default
+# если не включать в настрйоках кластера istio, то установка проходит без ошибок. И надо указывать profile=default а не remote как я сделал прошлый раз - он тут не подходит
+
+kubectl apply -f https://raw.githubusercontent.com/weaveworks/flagger/master/artifacts/flagger/crd.yaml
+helm upgrade --install flagger flagger/flagger \
+--namespace=istio-system \
+--set crd.create=false \
+--set meshProvider=istio \
+--set metricsServer=http://prometheus:9090
+
+kubectl delete pods --all -n microservices-demo 
+kubectl get svc istio-ingressgateway -n istio-system
+NAME                   TYPE           CLUSTER-IP   EXTERNAL-IP     PORT(S)                                                      AGE
+istio-ingressgateway   LoadBalancer   10.8.5.179   35.222.38.154   15021:30135/TCP,80:32506/TCP,443:31792/TCP,15443:30046/TCP   3m34s
+# узнали новый ip, пушим его в loadgenerator
+```
+
+ - все получилось, привожу вывод:
+ 
+```
+$ kubectl get canaries -n microservices-demo 
+NAME       STATUS      WEIGHT   LASTTRANSITIONTIME
+frontend   Succeeded   0        2020-10-12T21:41:50Z
+```
+
+
+```
+$ kubectl describe canary frontend -n microservices-demo                              
+Name:         frontend
+Namespace:    microservices-demo
+Labels:       <none>
+Annotations:  helm.fluxcd.io/antecedent: microservices-demo:helmrelease/frontend
+API Version:  flagger.app/v1beta1
+Kind:         Canary
+Metadata:
+  Creation Timestamp:  2020-10-12T20:53:11Z
+  Generation:          1
+  Resource Version:    54025
+  Self Link:           /apis/flagger.app/v1beta1/namespaces/microservices-demo/canaries/frontend
+  UID:                 ccdc3c53-8285-4cff-8c14-8ae19fd24c79
+Spec:
+  Analysis:
+    Interval:    1m
+    Max Weight:  30
+    Metrics:
+      Interval:   1m
+      Name:       request-success-rate
+      Threshold:  99
+    Step Weight:  10
+    Threshold:    1
+  Provider:       istio
+  Service:
+    Gateways:
+      frontend
+    Hosts:
+      *
+    Port:  80
+    Retries:
+      Attempts:         3
+      Per Try Timeout:  1s
+      Retry On:         gateway-error,connect-failure,refused-stream
+    Target Port:        8080
+    Traffic Policy:
+      Tls:
+        Mode:  DISABLE
+  Target Ref:
+    API Version:  apps/v1
+    Kind:         Deployment
+    Name:         frontend
+Status:
+  Canary Weight:  0
+  Conditions:
+    Last Transition Time:  2020-10-12T21:41:50Z
+    Last Update Time:      2020-10-12T21:41:50Z
+    Message:               Canary analysis completed successfully, promotion finished.
+    Reason:                Succeeded
+    Status:                True
+    Type:                  Promoted
+  Failed Checks:           0
+  Iterations:              0
+  Last Applied Spec:       66c4d6964
+  Last Promoted Spec:      66c4d6964
+  Last Transition Time:    2020-10-12T21:41:50Z
+  Phase:                   Succeeded
+  Tracked Configs:
+Events:
+  Type     Reason  Age                From     Message
+  ----     ------  ----               ----     -------
+  Warning  Synced  50m                flagger  frontend-primary.microservices-demo not ready: waiting for rollout to finish: observed deployment generation less then desired generation
+  Warning  Synced  49m (x2 over 50m)  flagger  Error checking metric providers: prometheus not avaiable: running query failed: request failed: Get "http://prometheus:9090/api/v1/query?query=vector%281%29": dial tcp: lookup prometheus on 10.8.0.10:53: no such host
+  Normal   Synced  49m                flagger  Initialization done! frontend.microservices-demo
+  Normal   Synced  30m                flagger  New revision detected! Scaling up frontend.microservices-demo
+  Normal   Synced  29m                flagger  Starting canary analysis for frontend.microservices-demo
+  Normal   Synced  29m                flagger  Advance frontend.microservices-demo canary weight 10
+  Warning  Synced  28m                flagger  Prometheus query failed: running query failed: request failed: Get "http://prometheus-kube-prometheus-prometheus:9090/api/v1/query?query=+sum%28+rate%28+istio_requests_total%7B+reporter%3D%22destination%22%2C+destination_workload_namespace%3D%22microservices-demo%22%2C+destination_workload%3D~%22frontend%22%2C+response_code%21~%225.%2A%22+%7D%5B1m%5D+%29+%29+%2F+sum%28+rate%28+istio_requests_total%7B+reporter%3D%22destination%22%2C+destination_workload_namespace%3D%22microservices-demo%22%2C+destination_workload%3D~%22frontend%22+%7D%5B1m%5D+%29+%29+%2A+100": dial tcp: lookup prometheus-kube-prometheus-prometheus on 10.8.0.10:53: no such host
+  Warning  Synced  27m                flagger  Rolling back frontend.microservices-demo failed checks threshold reached 1
+  Warning  Synced  27m                flagger  Canary failed! Scaling down frontend.microservices-demo
+  Normal   Synced  8m12s              flagger  New revision detected! Scaling up frontend.microservices-demo
+  Normal   Synced  7m12s              flagger  Starting canary analysis for frontend.microservices-demo
+  Normal   Synced  7m12s              flagger  Advance frontend.microservices-demo canary weight 10
+  Normal   Synced  6m12s              flagger  Advance frontend.microservices-demo canary weight 20
+  Normal   Synced  5m12s              flagger  Advance frontend.microservices-demo canary weight 30
+  Normal   Synced  4m12s              flagger  Copying frontend.microservices-demo template spec to frontend-primary.microservices-demo
+  Normal   Synced  3m12s              flagger  Routing all traffic to primary
+  Normal   Synced  2m12s              flagger  Promotion completed! Scaling down frontend.microservices-demo
+```
+
+
